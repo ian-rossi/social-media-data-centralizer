@@ -5,7 +5,7 @@ class WorkExperienceService
   # @return [Typhoeus::Request, void] Requisição que busca a experiência profissional à partir do usuário
   # Returns:
   def get_request(params)
-    raise 'Method WorkExperience#get_request not implemented!'
+    raise 'Method WorkExperienceService#get_request not implemented!'
   end
 
   # Mapeia a resposta da requisição para o DTO
@@ -13,6 +13,6 @@ class WorkExperienceService
   # @param response [Typhoeus::Response] Response da requisição
   # @return [{[key: String] : Array[WorkExperienceDTO, RFC9457DTO]}] Experiência profissional à partir do usuário
   def to_dto(response)
-    raise 'Method WorkExperience#to_dto not implemented!'
+    raise 'Method WorkExperienceService#to_dto not implemented!'
   end
 end

@@ -2,6 +2,20 @@
 class LinkedInService
   extend WorkExperienceService
 
+  def get_request(params)
+    permitted_params = params.permit(:linked_in_access_token)
+    LinkedInService.new_request(permitted_params[:linked_in_access_token]) if permitted_params.permitted?
+    nil
+  end
+
+  def to_dto(response)
+    body = response.body
+    if response.failure?
+      { linkedin: RFC9457DTO.new(body.status, body.message, "Código de erro do LinkedIn: #{body.serviceErrorCode}") }
+    end
+    { linkedin: body.positions.map { |position| LinkedInService.new_work_experience_dto(position) } }
+  end
+
   def new_request(linked_in_access_token)
     Typhoeus::Request.new(
       'https://api.linkedin.com/v2/me?projection=(positions:(companyName,endMonthYear,locationName,startMonthYear,title))',
@@ -13,27 +27,14 @@ class LinkedInService
     )
   end
 
-  def get_request(params)
-    permitted_params = params.permit(:linked_in_access_token)
-    permitted_params.permitted ? new_request(permitted_params[:linked_in_access_token]) : nil
-  end
-
   def new_work_experience_dto(position)
     WorkExperienceDTO.new(
-      to_string(position.companyName),
-      to_string(position.title),
-      to_string(position.locationName),
-      to_month_year(position.startMonthYear),
-      to_month_year(position.endMonthYear)
+      LinkedInService.to_string(position.companyName),
+      LinkedInService.to_string(position.title),
+      LinkedInService.to_string(position.locationName),
+      LinkedInService.to_month_year(position.startMonthYear),
+      LinkedInService.to_month_year(position.endMonthYear)
     )
-  end
-
-  def to_dto(response)
-    body = response.body
-    if response.failure?
-      { linkedin: RFC9457DTO.new(body.status, body.message, "Código de erro do LinkedIn: #{body.serviceErrorCode}") }
-    end
-    { linkedin: body.positions.map { |position| new_work_experience_dto(position) } }
   end
 
   # Converte um objeto do tipo MultiLocaleString para texto.
@@ -51,4 +52,6 @@ class LinkedInService
     nil if date_object.nil?
     MonthYear.new(date_object.month, date_object.year)
   end
+
+  private_class_method :new_request, :new_work_experience_dto, :to_string, :to_month_year
 end
