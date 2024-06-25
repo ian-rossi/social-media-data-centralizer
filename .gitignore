@@ -36,3 +36,6 @@
 
 # RBS Collection files
 .gem_rbs_collection/**
+
+# Coverage report
+/coverage/**

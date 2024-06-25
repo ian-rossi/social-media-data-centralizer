@@ -1,4 +1,5 @@
-class WorkExperienceService
+# Classe de serviço responsável por definir o contrato da experiência profissional
+module WorkExperienceService
   # Monta uma requisição que busca a experiência profissional à partir do usuário
   #
   # @param params [ActionController::Parameters] Parâmetros do controller

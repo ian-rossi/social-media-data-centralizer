@@ -1,19 +1,31 @@
+require 'json'
 # Classe de serviço responsável por mapear as chamadas de API do LinkedIn
 class LinkedInService
   extend WorkExperienceService
 
   def get_request(params)
-    permitted_params = params.permit(:linked_in_access_token)
-    LinkedInService.new_request(permitted_params[:linked_in_access_token]) if permitted_params.permitted?
+    linked_in_access_token = params[:linked_in_access_token]
+    return new_request(linked_in_access_token) if linked_in_access_token.present?
+
     nil
   end
 
   def to_dto(response)
-    body = response.body
-    if response.failure?
-      { linkedin: RFC9457DTO.new(body.status, body.message, "Código de erro do LinkedIn: #{body.serviceErrorCode}") }
-    end
-    { linkedin: body.positions.map { |position| LinkedInService.new_work_experience_dto(position) } }
+    body_str = response.body
+    parsed_body = JSON.parse(body_str)
+    return { linkedin: new_rfc_9457_dto(parsed_body) } if response.failure?
+
+    { linkedin: parsed_body['positions'].map { |position| new_work_experience_dto(position) } }
+  end
+
+  private
+
+  def new_rfc_9457_dto(error_body)
+    RFC9457DTO.new(
+      error_body['status'],
+      error_body['message'],
+      "Código de erro do LinkedIn: #{error_body['serviceErrorCode']}"
+    )
   end
 
   def new_request(linked_in_access_token)
@@ -29,29 +41,29 @@ class LinkedInService
 
   def new_work_experience_dto(position)
     WorkExperienceDTO.new(
-      LinkedInService.to_string(position.companyName),
-      LinkedInService.to_string(position.title),
-      LinkedInService.to_string(position.locationName),
-      LinkedInService.to_month_year(position.startMonthYear),
-      LinkedInService.to_month_year(position.endMonthYear)
+      to_string(position['companyName']),
+      to_string(position['title']),
+      to_string(position['locationName']),
+      to_month_year(position['startMonthYear']),
+      to_month_year(position['endMonthYear'])
     )
   end
 
   # Converte um objeto do tipo MultiLocaleString para texto.
   # @see https://learn.microsoft.com/en-us/linkedin/k2/itm-preview/references/entities/multilocalestring
   def to_string(multi_locale_string)
-    nil if multi_locale_string.nil?
-    preferred_locale = multi_locale_string.preferredLocale
-    language_tag = "#{preferred_locale.language}_#{preferred_locale.country}"
-    multi_locale_string.localized[language_tag]
+    return nil if multi_locale_string.nil?
+
+    preferred_locale = multi_locale_string['preferredLocale']
+    language_tag = "#{preferred_locale['language']}_#{preferred_locale['country']}"
+    multi_locale_string['localized'][language_tag]
   end
 
   # Converte um objeto do tipo Date para MonthYear.
   # @see https://learn.microsoft.com/en-us/linkedin/k2/itm-preview/references/entities/date
   def to_month_year(date_object)
-    nil if date_object.nil?
-    MonthYear.new(date_object.month, date_object.year)
-  end
+    return nil if date_object.nil?
 
-  private_class_method :new_request, :new_work_experience_dto, :to_string, :to_month_year
+    MonthYear.new(date_object['month'], date_object['year'])
+  end
 end
